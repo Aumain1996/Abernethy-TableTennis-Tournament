@@ -802,9 +802,9 @@ elif page == "📋 Rules of the Tournament":
 
     ### Match Rules
     1. **Service** alternates every **2 points**
-    2. At **10-10 (deuce)**, service alternates every **1 point**
-    3. Players switch ends after each set
-    4. In the final set, players switch ends when one player reaches **5 points**
+    2. Players do **not** have to serve cross court
+    3. At **10-10 (deuce)**, service alternates every **1 point**
+    4. Players switch ends after each set
 
     ---
 
@@ -816,20 +816,10 @@ elif page == "📋 Rules of the Tournament":
 
     ---
 
-    ### Scheduling
-    - Match dates and times will be scheduled and displayed in the bracket
-    - Players must be available at their scheduled time
-    - If a player cannot attend, they **forfeit** the match
-    - A **10-minute grace period** is allowed before a walkover is declared
-
-    ---
-
     ### Code of Conduct
     1. **Fair play** — All players are expected to play honestly and call scores fairly
-    2. **Sportsmanship** — Shake hands before and after each match
-    3. **Disputes** — Any scoring disputes should be referred to the tournament organiser
-    4. **Equipment** — Tournament balls will be provided; players may use their own bats
-    5. **Respect** — Excessive celebration, intimidation or unsporting behaviour will not be tolerated
+    2. **Sportsmanship** — Shake hands after each match
+    3. **Respect** — Excessive celebration will be tolerated and is encouraged
 
     ---
 
@@ -841,7 +831,7 @@ elif page == "📋 Rules of the Tournament":
     ---
 
     ### Contact
-    For any queries regarding the tournament, please contact the tournament organiser.
+    For any queries regarding the tournament, please contact Aussie.
 
     ---
 
