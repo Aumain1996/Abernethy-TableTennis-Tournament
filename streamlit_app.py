@@ -2,7 +2,10 @@ import streamlit as st
 import pandas as pd
 import math
 import random
+import json
+import os
 from datetime import datetime, time
+from supabase import create_client
 
 # ─── App Configuration ───────────────────────────────────────────────────────
 st.set_page_config(
@@ -132,16 +135,60 @@ def generate_bracket(players):
     return bracket, bracket_size, num_rounds
 
 
-def load_matches():
-    """Load match data from session state."""
-    if "matches" not in st.session_state:
-        st.session_state["matches"] = {}
-    return st.session_state["matches"]
+@st.cache_resource
+def get_supabase_client():
+    """Get a cached Supabase client. Returns None if secrets are not configured."""
+    try:
+        url = st.secrets["supabase"]["url"]
+        key = st.secrets["supabase"]["key"]
+        return create_client(url, key)
+    except Exception:
+        return None
 
 
-def save_matches(matches):
-    """Save match data to session state."""
-    st.session_state["matches"] = matches
+def load_matches() -> dict:
+    """Load all match data from Supabase. Falls back to local JSON if not configured."""
+    client = get_supabase_client()
+    if client:
+        try:
+            response = client.table("matches").select("match_key, data").execute()
+            return {row["match_key"]: row["data"] for row in response.data}
+        except Exception as e:
+            st.warning(f"⚠️ Could not load from database: {e}")
+    # Fallback: local JSON file (for local development only)
+    matches_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "matches_data.json")
+    if os.path.exists(matches_path):
+        try:
+            with open(matches_path, "r") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            pass
+    return {}
+
+
+def save_match(match_key: str, match_data: dict):
+    """Upsert a single match to Supabase. Falls back to local JSON if not configured."""
+    client = get_supabase_client()
+    if client:
+        try:
+            client.table("matches").upsert(
+                {"match_key": match_key, "data": match_data}
+            ).execute()
+            return
+        except Exception as e:
+            st.warning(f"⚠️ Could not save to database: {e}. Saving locally instead.")
+    # Fallback: local JSON file
+    matches_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "matches_data.json")
+    try:
+        existing = {}
+        if os.path.exists(matches_path):
+            with open(matches_path, "r") as f:
+                existing = json.load(f)
+        existing[match_key] = match_data
+        with open(matches_path, "w") as f:
+            json.dump(existing, f, indent=2)
+    except IOError as e:
+        st.error(f"❌ Failed to save match: {e}")
 
 
 def get_match_key(round_num, match_num):
@@ -402,14 +449,15 @@ if page == "🏆 Tournament Bracket":
 
             # Save button
             if st.button(f"💾 Save Match {match_idx + 1}", key=f"save_{match_key}"):
-                matches[match_key] = {
+                new_match_data = {
                     "player_a": player_a,
                     "player_b": player_b,
                     "date": match_date.strftime("%Y-%m-%d") if match_date else None,
                     "time": match_time.strftime("%H:%M") if match_time else None,
                     "sets": new_sets,
                 }
-                save_matches(matches)
+                matches[match_key] = new_match_data
+                save_match(match_key, new_match_data)
                 st.success("✅ Match saved successfully!")
                 st.rerun()
 
