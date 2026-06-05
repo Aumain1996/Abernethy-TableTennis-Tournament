@@ -53,8 +53,8 @@ Copy:
 
 ```toml
 [supabase]
-url = "https://your-project-ref.supabase.co"
-key = "your-anon-public-key"
+url = "https://YOUR_PROJECT_REF.supabase.co"
+key = "YOUR_ANON_PUBLIC_KEY"
 ```
 
 4. Click **Save** — the app will automatically restart
