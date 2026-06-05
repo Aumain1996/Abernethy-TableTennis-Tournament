@@ -144,9 +144,27 @@ def get_supabase_client():
     try:
         url = st.secrets["supabase"]["url"]
         key = st.secrets["supabase"]["key"]
-        return create_client(url, key)
+        client = create_client(url, key)
+        # Verify connection with a lightweight ping
+        client.table("matches").select("match_key").limit(1).execute()
+        return client
+    except KeyError:
+        return None  # Secrets not configured
     except Exception:
-        return None
+        return None  # Connection failed
+
+
+def supabase_status():
+    """Return (is_connected: bool, message: str) for display in the sidebar."""
+    try:
+        url = st.secrets["supabase"]["url"]
+        key = st.secrets["supabase"]["key"]  # noqa — just checking keys exist
+    except (KeyError, FileNotFoundError):
+        return False, "Supabase secrets not configured in Streamlit → Settings → Secrets"
+    client = get_supabase_client()
+    if client is None:
+        return False, "Secrets found but connection to Supabase failed"
+    return True, f"Connected · {url.split('//')[1].split('.')[0]}.supabase.co"
 
 
 def load_matches() -> dict:
@@ -157,7 +175,7 @@ def load_matches() -> dict:
             response = client.table("matches").select("match_key, data").execute()
             return {row["match_key"]: row["data"] for row in response.data}
         except Exception as e:
-            st.warning(f"⚠️ Could not load from Supabase: {e}. Falling back to local file.")
+            st.error(f"❌ Supabase load failed: {e}")
     # Fallback: local JSON file
     if os.path.exists(MATCHES_PATH):
         try:
@@ -169,29 +187,28 @@ def load_matches() -> dict:
 
 
 def save_matches(matches: dict, changed_key: str = None):
-    """Save match data to Supabase (upsert changed row), or fall back to local JSON."""
+    """Upsert the changed match row to Supabase. Falls back to local JSON if not configured."""
     client = get_supabase_client()
     if client:
         try:
-            # Only upsert the single row that changed — efficient and fast
             if changed_key and changed_key in matches:
                 client.table("matches").upsert(
                     {"match_key": changed_key, "data": matches[changed_key]}
                 ).execute()
             else:
-                # Bulk upsert (e.g. on initial sync)
                 rows = [{"match_key": k, "data": v} for k, v in matches.items()]
                 if rows:
                     client.table("matches").upsert(rows).execute()
-            return
+            return  # ✅ saved to Supabase — do NOT fall through to file
         except Exception as e:
-            st.warning(f"⚠️ Could not save to Supabase: {e}. Saving to local file instead.")
-    # Fallback: local JSON file
+            st.error(f"❌ Supabase save failed: {e}")
+    # Fallback: local JSON file (only reached if Supabase is unavailable)
     try:
         with open(MATCHES_PATH, "w") as f:
             json.dump(matches, f, indent=2)
+        st.warning("⚠️ Saved to local file only — Supabase is not connected.")
     except IOError as e:
-        st.error(f"❌ Failed to save match: {e}")
+        st.error(f"❌ Local file save also failed: {e}")
 
 
 def get_match_key(round_num, match_num):
@@ -352,6 +369,16 @@ page = st.sidebar.radio(
     "Go to:",
     ["🏆 Tournament Bracket", "🎯 Draw", "📊 Ladder", "📋 Rules of the Tournament"]
 )
+
+# ─── Supabase Connection Status ──────────────────────────────────────────────
+st.sidebar.markdown("---")
+is_connected, status_msg = supabase_status()
+if is_connected:
+    st.sidebar.success(f"🟢 **Database connected**\n\n{status_msg}")
+else:
+    st.sidebar.error(f"🔴 **Database NOT connected**\n\n{status_msg}\n\n"
+                     f"Scores will **not persist** until this is fixed.\n\n"
+                     f"See `SUPABASE_SETUP.md` for instructions.")
 
 st.title("🏓 Abernethy Road Table Tennis Tournament")
 st.markdown("---")
