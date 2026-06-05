@@ -3,6 +3,9 @@
 This app uses [Supabase](https://supabase.com) (free) to store match scores persistently,
 shared across all users visiting the Streamlit app.
 
+> ⚠️ **Never paste your real Supabase credentials into this file.**
+> Add them only to Streamlit Cloud Secrets or your local `.streamlit/secrets.toml`.
+
 ---
 
 ## Step 1 — Create a Free Supabase Project
@@ -19,9 +22,9 @@ In your Supabase project, go to **SQL Editor** and run this:
 
 ```sql
 CREATE TABLE matches (
-  match_key TEXT PRIMARY KEY,
-  data      JSONB        NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  match_key  TEXT         PRIMARY KEY,
+  data       JSONB        NOT NULL,
+  updated_at TIMESTAMPTZ  DEFAULT NOW()
 );
 
 -- Allow public read/write (fine for an internal tournament app)
@@ -41,7 +44,9 @@ In your Supabase project go to:
 
 Copy:
 - **Project URL** — looks like `https://abcdefghij.supabase.co`
-- **anon / public key** — a long JWT string
+- **anon / public key** — a long JWT string starting with `eyJ...`
+
+> ⚠️ Use the **anon/public** key — NOT the `service_role` or `secret` key.
 
 ---
 
@@ -49,7 +54,7 @@ Copy:
 
 1. Go to your app on [share.streamlit.io](https://share.streamlit.io)
 2. Click **⋮ (three dots) → Settings → Secrets**
-3. Paste the following (replacing with your actual values):
+3. Paste the following, replacing the placeholder values:
 
 ```toml
 [supabase]
@@ -63,21 +68,23 @@ key = "YOUR_ANON_PUBLIC_KEY"
 
 ## Step 5 — For Local Development
 
-Create the file `.streamlit/secrets.toml` in this folder with the same content:
+Create `.streamlit/secrets.toml` in this folder with the same content:
 
 ```toml
 [supabase]
-url = "https://your-project-ref.supabase.co"
-key = "your-anon-public-key"
+url = "https://YOUR_PROJECT_REF.supabase.co"
+key = "YOUR_ANON_PUBLIC_KEY"
 ```
 
-> ⚠️ Never commit this file to GitHub. It is already in `.gitignore`.
+This file is already in `.gitignore` so it will never be committed to GitHub.
 
 ---
 
 ## How It Works
 
-- Every time a match score is saved, it is **upserted** (inserted or updated) into the `matches` table in Supabase
-- Every time the app loads (or any button is clicked), it **fetches all match data fresh** from Supabase
-- This means all users see the same live data instantly
-- If Supabase is not configured, the app falls back to a local `matches_data.json` file
+| Action | What happens |
+|---|---|
+| App loads | Fetches all match rows fresh from Supabase |
+| Save button clicked | Upserts only the changed match row to Supabase |
+| Supabase unreachable | Falls back to local `matches_data.json` with a warning |
+| Multiple users open | All see the same live data — no conflicts |

@@ -4,7 +4,7 @@
 # Setup guide (may contain credentials if edited locally — keep off GitHub)
 SUPABASE_SETUP.md
 
-# Local match data (only used as fallback when Supabase is not configured)
+# Local match data fallback (Supabase is the primary store)
 matches_data.json
 
 # Python

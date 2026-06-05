@@ -135,6 +135,9 @@ def generate_bracket(players):
     return bracket, bracket_size, num_rounds
 
 
+MATCHES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "matches_data.json")
+
+
 @st.cache_resource
 def get_supabase_client():
     """Get a cached Supabase client. Returns None if secrets are not configured."""
@@ -147,46 +150,46 @@ def get_supabase_client():
 
 
 def load_matches() -> dict:
-    """Load all match data from Supabase. Falls back to local JSON if not configured."""
+    """Load all match data from Supabase. Falls back to local JSON file if not configured."""
     client = get_supabase_client()
     if client:
         try:
             response = client.table("matches").select("match_key, data").execute()
             return {row["match_key"]: row["data"] for row in response.data}
         except Exception as e:
-            st.warning(f"⚠️ Could not load from database: {e}")
-    # Fallback: local JSON file (for local development only)
-    matches_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "matches_data.json")
-    if os.path.exists(matches_path):
+            st.warning(f"⚠️ Could not load from Supabase: {e}. Falling back to local file.")
+    # Fallback: local JSON file
+    if os.path.exists(MATCHES_PATH):
         try:
-            with open(matches_path, "r") as f:
+            with open(MATCHES_PATH, "r") as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
-            pass
+            return {}
     return {}
 
 
-def save_match(match_key: str, match_data: dict):
-    """Upsert a single match to Supabase. Falls back to local JSON if not configured."""
+def save_matches(matches: dict, changed_key: str = None):
+    """Save match data to Supabase (upsert changed row), or fall back to local JSON."""
     client = get_supabase_client()
     if client:
         try:
-            client.table("matches").upsert(
-                {"match_key": match_key, "data": match_data}
-            ).execute()
+            # Only upsert the single row that changed — efficient and fast
+            if changed_key and changed_key in matches:
+                client.table("matches").upsert(
+                    {"match_key": changed_key, "data": matches[changed_key]}
+                ).execute()
+            else:
+                # Bulk upsert (e.g. on initial sync)
+                rows = [{"match_key": k, "data": v} for k, v in matches.items()]
+                if rows:
+                    client.table("matches").upsert(rows).execute()
             return
         except Exception as e:
-            st.warning(f"⚠️ Could not save to database: {e}. Saving locally instead.")
+            st.warning(f"⚠️ Could not save to Supabase: {e}. Saving to local file instead.")
     # Fallback: local JSON file
-    matches_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "matches_data.json")
     try:
-        existing = {}
-        if os.path.exists(matches_path):
-            with open(matches_path, "r") as f:
-                existing = json.load(f)
-        existing[match_key] = match_data
-        with open(matches_path, "w") as f:
-            json.dump(existing, f, indent=2)
+        with open(MATCHES_PATH, "w") as f:
+            json.dump(matches, f, indent=2)
     except IOError as e:
         st.error(f"❌ Failed to save match: {e}")
 
@@ -449,15 +452,14 @@ if page == "🏆 Tournament Bracket":
 
             # Save button
             if st.button(f"💾 Save Match {match_idx + 1}", key=f"save_{match_key}"):
-                new_match_data = {
+                matches[match_key] = {
                     "player_a": player_a,
                     "player_b": player_b,
                     "date": match_date.strftime("%Y-%m-%d") if match_date else None,
                     "time": match_time.strftime("%H:%M") if match_time else None,
                     "sets": new_sets,
                 }
-                matches[match_key] = new_match_data
-                save_match(match_key, new_match_data)
+                save_matches(matches, changed_key=match_key)
                 st.success("✅ Match saved successfully!")
                 st.rerun()
 
