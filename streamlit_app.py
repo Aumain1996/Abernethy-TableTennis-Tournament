@@ -154,19 +154,6 @@ def get_supabase_client():
         return None  # Connection failed
 
 
-def supabase_status():
-    """Return (is_connected: bool, message: str) for display in the sidebar."""
-    try:
-        url = st.secrets["supabase"]["url"]
-        key = st.secrets["supabase"]["key"]  # noqa — just checking keys exist
-    except (KeyError, FileNotFoundError):
-        return False, "Supabase secrets not configured in Streamlit → Settings → Secrets"
-    client = get_supabase_client()
-    if client is None:
-        return False, "Secrets found but connection to Supabase failed"
-    return True, f"Connected · {url.split('//')[1].split('.')[0]}.supabase.co"
-
-
 def load_matches() -> dict:
     """Load all match data from Supabase. Falls back to local JSON file if not configured."""
     client = get_supabase_client()
@@ -367,27 +354,17 @@ matches = load_matches()
 st.sidebar.title("🏓 Navigation")
 page = st.sidebar.radio(
     "Go to:",
-    ["🏆 Tournament Bracket", "🎯 Draw", "📊 Ladder", "📋 Rules of the Tournament"]
+    ["📝 Results Entry", "🎯 Draw", "📊 Ladder", "📋 Rules of the Tournament"]
 )
-
-# ─── Supabase Connection Status ──────────────────────────────────────────────
-st.sidebar.markdown("---")
-is_connected, status_msg = supabase_status()
-if is_connected:
-    st.sidebar.success(f"🟢 **Database connected**\n\n{status_msg}")
-else:
-    st.sidebar.error(f"🔴 **Database NOT connected**\n\n{status_msg}\n\n"
-                     f"Scores will **not persist** until this is fixed.\n\n"
-                     f"See `SUPABASE_SETUP.md` for instructions.")
 
 st.title("🏓 Abernethy Road Table Tennis Tournament")
 st.markdown("---")
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PAGE 1: TOURNAMENT BRACKET
+# PAGE 1: RESULTS ENTRY
 # ═══════════════════════════════════════════════════════════════════════════════
-if page == "🏆 Tournament Bracket":
-    st.header("🏆 Knockout Tournament Bracket")
+if page == "📝 Results Entry":
+    st.header("📝 Results Entry")
     st.markdown(f"**{len(players)} Players** | **{num_rounds} Rounds** | Best of 3 Sets (First to 11)")
 
     # Round selector
@@ -397,36 +374,37 @@ if page == "🏆 Tournament Bracket":
 
     num_matches_in_round = bracket_size // (2 ** (selected_round + 1))
 
-    st.markdown(f"### {round_names[selected_round]} — {num_matches_in_round} Match(es)")
+    # Count real (non-bye) matches for the header
+    real_matches = [
+        m for m in range(num_matches_in_round)
+        if not any(
+            p == "BYE"
+            for p in get_match_participants(selected_round, m, bracket, matches, num_rounds)
+        )
+    ]
+    st.markdown(f"### {round_names[selected_round]} — {len(real_matches)} Match(es)")
     st.markdown("---")
 
+    match_display_num = 0
     for match_idx in range(num_matches_in_round):
         player_a, player_b = get_match_participants(selected_round, match_idx, bracket, matches, num_rounds)
 
-        # Handle byes
+        # Skip BYE matches entirely — they don't need results entered
         if player_a == "BYE" or player_b == "BYE":
-            advancing = player_b if player_a == "BYE" else player_a
-            st.markdown(f"**Match {match_idx + 1}:** {advancing} *(BYE — advances automatically)*")
-            st.markdown("---")
             continue
 
         if player_a is None or player_b is None:
-            st.markdown(f"**Match {match_idx + 1}:** *Waiting for previous round results*")
+            st.markdown(f"*Waiting for previous round results*")
             st.markdown("---")
             continue
 
+        match_display_num += 1
         match_key = get_match_key(selected_round, match_idx)
         match_data = matches.get(match_key, {})
 
-        # Display match header
         winner = get_winner(selected_round, match_idx, bracket, matches, num_rounds)
-        winner_badge = ""
-        if winner == player_a:
-            winner_badge = " ✅"
-        elif winner == player_b:
-            winner_badge = ""
 
-        with st.expander(f"**Match {match_idx + 1}: {player_a} vs {player_b}**" +
+        with st.expander(f"**Match {match_display_num}: {player_a} vs {player_b}**" +
                          (f" — Winner: {winner} 🏆" if winner else ""), expanded=False):
 
             col_date, col_time = st.columns(2)
@@ -478,7 +456,7 @@ if page == "🏆 Tournament Bracket":
                         st.success(f"✓ {player_b}")
 
             # Save button
-            if st.button(f"💾 Save Match {match_idx + 1}", key=f"save_{match_key}"):
+            if st.button(f"💾 Save Match {match_display_num}", key=f"save_{match_key}"):
                 matches[match_key] = {
                     "player_a": player_a,
                     "player_b": player_b,
@@ -491,32 +469,6 @@ if page == "🏆 Tournament Bracket":
                 st.rerun()
 
         st.markdown("---")
-
-    # ─── Visual Bracket Summary ──────────────────────────────────────────────
-    st.markdown("### 📋 Full Bracket Overview")
-    for r in range(num_rounds):
-        num_matches = bracket_size // (2 ** (r + 1))
-        st.markdown(f"**{get_round_name(r, num_rounds)}**")
-        overview_data = []
-        for m in range(num_matches):
-            pa, pb = get_match_participants(r, m, bracket, matches, num_rounds)
-            w = get_winner(r, m, bracket, matches, num_rounds)
-            if pa == "BYE" or pb == "BYE":
-                advancing = pb if pa == "BYE" else pa
-                overview_data.append({
-                    "Match": m + 1,
-                    "Player A": pa if pa != "BYE" else "—",
-                    "Player B": pb if pb != "BYE" else "—",
-                    "Winner": advancing + " (BYE)" if advancing else "—"
-                })
-            else:
-                overview_data.append({
-                    "Match": m + 1,
-                    "Player A": pa or "TBD",
-                    "Player B": pb or "TBD",
-                    "Winner": w or "—"
-                })
-        st.dataframe(pd.DataFrame(overview_data), use_container_width=True, hide_index=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
