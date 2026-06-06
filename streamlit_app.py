@@ -829,9 +829,8 @@ elif page == "📋 Rules of the Tournament":
     ---
 
     ### Code of Conduct
-    1. **Fair play** — All players are expected to play honestly and call scores fairly
+    1. **Respect** — Excessive celebration will be tolerated and is encouraged
     2. **Sportsmanship** — Shake hands after each match
-    3. **Respect** — Excessive celebration will be tolerated and is encouraged
 
     ---
 
@@ -847,7 +846,7 @@ elif page == "📋 Rules of the Tournament":
 
     ---
 
-    *Good luck and may the best player win!* 🏆
+    *Good luck and may the superior Abernethy road human win!* 🏆
     """)
 
 # ─── Footer ──────────────────────────────────────────────────────────────────
