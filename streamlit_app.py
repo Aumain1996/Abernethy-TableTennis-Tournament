@@ -415,20 +415,11 @@ if page == "📝 Results Entry":
         with st.expander(f"**Match {match_display_num}: {player_a} vs {player_b}**" +
                          (f" — Winner: {winner} 🏆{forfeit_label}" if winner else ""), expanded=False):
 
-            col_date, col_time = st.columns(2)
-            with col_date:
-                match_date = st.date_input(
+            match_date = st.date_input(
                     "Match Date",
                     value=datetime.strptime(match_data["date"], "%Y-%m-%d").date()
                     if match_data.get("date") else None,
                     key=f"date_{match_key}"
-                )
-            with col_time:
-                match_time = st.time_input(
-                    "Match Time",
-                    value=datetime.strptime(match_data["time"], "%H:%M").time()
-                    if match_data.get("time") else time(12, 0),
-                    key=f"time_{match_key}"
                 )
 
             # ── Forfeit toggle ────────────────────────────────────────────────
@@ -494,7 +485,6 @@ if page == "📝 Results Entry":
                     "player_a": player_a,
                     "player_b": player_b,
                     "date": match_date.strftime("%Y-%m-%d") if match_date else None,
-                    "time": match_time.strftime("%H:%M") if match_time else None,
                     "sets": new_sets,
                     "forfeit": forfeit_player,
                     "forfeit_player": (player_a if forfeit_player == "A" else player_b) if forfeit_player else None,
