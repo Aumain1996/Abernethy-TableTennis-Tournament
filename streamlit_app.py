@@ -752,7 +752,7 @@ elif page == "🎯 Draw":
     st.markdown("### 📋 Round-by-Round Summary")
     for r in range(num_rounds):
         round_name = get_round_name(r, num_rounds)
-        with st.expander(f"**{round_name}** ({len(rounds_data[r])} matches)", expanded=(r >= num_rounds - 3)):
+        with st.expander(f"**{round_name}** ({len(rounds_data[r])} matches)", expanded=False):
             summary = []
             for m, md in enumerate(rounds_data[r]):
                 pa = md["player_a"] or "TBD"
