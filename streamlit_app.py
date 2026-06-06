@@ -4,6 +4,7 @@ import math
 import random
 import json
 import os
+import base64
 from datetime import datetime, time
 from supabase import create_client
 
@@ -205,9 +206,9 @@ def get_match_key(round_num, match_num):
 
 def get_round_name(round_num, total_rounds):
     """Get a human-readable name for a round."""
-    rounds_remaining = total_rounds - round_num
+    rounds_remaining = total_rounds - round_num - 1  # 0 = this is the final round
     if rounds_remaining == 0:
-        return "🏆 Final"
+        return "🏆 Grand Final"
     elif rounds_remaining == 1:
         return "Semi Finals"
     elif rounds_remaining == 2:
@@ -508,7 +509,17 @@ elif page == "🎯 Draw":
     def build_bracket_html():
         """Generate HTML/CSS for a graphical bracket view."""
 
-        # Determine rounds per side (all rounds except final)
+        # Load and base64-encode the trophy image for embedding in HTML
+        trophy_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Table Tennis Trophy.jpg")
+        trophy_img_tag = ""
+        if os.path.exists(trophy_path):
+            with open(trophy_path, "rb") as f:
+                trophy_b64 = base64.b64encode(f.read()).decode()
+            trophy_img_tag = (
+                f'<img src="data:image/jpeg;base64,{trophy_b64}" '
+                f'style="width:120px;height:auto;display:block;margin:0 auto 10px auto;'
+                f'border-radius:8px;opacity:0.95;" alt="Trophy"/>'
+            )        # Determine rounds per side (all rounds except final)
         rounds_per_side = num_rounds - 1  # e.g. 5 rounds per side, then 1 final
 
         # Split matches into left and right halves
@@ -673,6 +684,7 @@ elif page == "🎯 Draw":
 
         # Build final
         final_html = '<div class="final-container">'
+        final_html += trophy_img_tag
         final_html += '<div class="final-label">🏆 GRAND FINAL 🏆</div>'
         if final_match:
             pa = get_display_name(final_match["player_a"])
