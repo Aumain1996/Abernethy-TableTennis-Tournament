@@ -360,146 +360,16 @@ matches = load_matches()
 st.sidebar.title("🏓 Navigation")
 page = st.sidebar.radio(
     "Go to:",
-    ["📝 Results Entry", "🎯 Draw", "📊 Ladder", "📋 Rules of the Tournament"]
+    ["🎯 Draw", "📝 Results Entry", "📊 Ladder", "📋 Rules of the Tournament"]
 )
 
 st.title("🏓 Abernethy Road Table Tennis Tournament")
 st.markdown("---")
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PAGE 1: RESULTS ENTRY
+# PAGE 1: GRAPHICAL DRAW
 # ═══════════════════════════════════════════════════════════════════════════════
-if page == "📝 Results Entry":
-    st.header("📝 Results Entry")
-    st.markdown(f"**{len(players)} Players** | **{num_rounds} Rounds** | Best of 3 Sets (First to 11)")
-
-    # Round selector
-    round_names = [get_round_name(r, num_rounds) for r in range(num_rounds)]
-    selected_round = st.selectbox("Select Round", range(num_rounds),
-                                   format_func=lambda x: round_names[x])
-
-    num_matches_in_round = bracket_size // (2 ** (selected_round + 1))
-
-    # Count real (non-bye) matches for the header
-    real_matches = [
-        m for m in range(num_matches_in_round)
-        if not any(
-            p == "BYE"
-            for p in get_match_participants(selected_round, m, bracket, matches, num_rounds)
-        )
-    ]
-    st.markdown(f"### {round_names[selected_round]} — {len(real_matches)} Match(es)")
-    st.markdown("---")
-
-    match_display_num = 0
-    for match_idx in range(num_matches_in_round):
-        player_a, player_b = get_match_participants(selected_round, match_idx, bracket, matches, num_rounds)
-
-        # Skip BYE matches entirely — they don't need results entered
-        if player_a == "BYE" or player_b == "BYE":
-            continue
-
-        if player_a is None or player_b is None:
-            st.markdown(f"*Waiting for previous round results*")
-            st.markdown("---")
-            continue
-
-        match_display_num += 1
-        match_key = get_match_key(selected_round, match_idx)
-        match_data = matches.get(match_key, {})
-
-        winner = get_winner(selected_round, match_idx, bracket, matches, num_rounds)
-        is_forfeit = bool(match_data.get("forfeit"))
-        forfeit_label = f" — 🚫 Forfeit ({match_data.get('forfeit_player', '')})" if is_forfeit else ""
-
-        with st.expander(f"**Match {match_display_num}: {player_a} vs {player_b}**" +
-                         (f" — Winner: {winner} 🏆{forfeit_label}" if winner else ""), expanded=False):
-
-            match_date = st.date_input(
-                    "Match Date",
-                    value=datetime.strptime(match_data["date"], "%Y-%m-%d").date()
-                    if match_data.get("date") else None,
-                    key=f"date_{match_key}"
-                )
-
-            # ── Forfeit toggle ────────────────────────────────────────────────
-            st.markdown("---")
-            forfeit_checked = st.checkbox(
-                "🚫 Record as Forfeit (opponent did not show up)",
-                value=is_forfeit,
-                key=f"forfeit_check_{match_key}"
-            )
-
-            forfeit_player = None
-            if forfeit_checked:
-                forfeiting = st.radio(
-                    "Which player forfeited?",
-                    options=[player_a, player_b],
-                    index=0 if match_data.get("forfeit") != "B" else 1,
-                    key=f"forfeit_who_{match_key}"
-                )
-                forfeit_player = "A" if forfeiting == player_a else "B"
-                st.warning(f"⚠️ **{forfeiting}** will be recorded as forfeiting. "
-                           f"**{''.join([player_b if forfeiting == player_a else player_a])}** advances.")
-
-            # ── Score entry (hidden when forfeit is selected) ─────────────────
-            new_sets = match_data.get("sets", [{}, {}, {}])
-            while len(new_sets) < 3:
-                new_sets.append({})
-
-            if not forfeit_checked:
-                st.markdown("---")
-                st.markdown(f"**{player_a}** vs **{player_b}**")
-                new_sets = []
-                cols = st.columns(3)
-                sets_data = match_data.get("sets", [{}, {}, {}])
-                while len(sets_data) < 3:
-                    sets_data.append({})
-                for set_idx in range(3):
-                    with cols[set_idx]:
-                        st.markdown(f"**Set {set_idx + 1}**")
-                        sa = st.number_input(
-                            f"{player_a}",
-                            min_value=0, max_value=99,
-                            value=sets_data[set_idx].get("score_a", 0) or 0,
-                            key=f"sa_{match_key}_{set_idx}"
-                        )
-                        sb = st.number_input(
-                            f"{player_b}",
-                            min_value=0, max_value=99,
-                            value=sets_data[set_idx].get("score_b", 0) or 0,
-                            key=f"sb_{match_key}_{set_idx}"
-                        )
-                        new_sets.append({"score_a": sa, "score_b": sb})
-
-                        sw = determine_set_winner(sa, sb)
-                        if sw == "A":
-                            st.success(f"✓ {player_a}")
-                        elif sw == "B":
-                            st.success(f"✓ {player_b}")
-
-            # ── Save button ───────────────────────────────────────────────────
-            st.markdown("---")
-            if st.button(f"💾 Save Match {match_display_num}", key=f"save_{match_key}"):
-                matches[match_key] = {
-                    "player_a": player_a,
-                    "player_b": player_b,
-                    "date": match_date.strftime("%Y-%m-%d") if match_date else None,
-                    "sets": new_sets,
-                    "forfeit": forfeit_player,
-                    "forfeit_player": (player_a if forfeit_player == "A" else player_b) if forfeit_player else None,
-                }
-                save_matches(matches, changed_key=match_key)
-                st.success("✅ Match saved successfully!")
-                st.rerun()
-
-        st.markdown("---")
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# PAGE 2: GRAPHICAL DRAW
-# ═══════════════════════════════════════════════════════════════════════════════
-elif page == "🎯 Draw":
+if page == "🎯 Draw":
     st.header("🎯 Tournament Draw")
     st.markdown("Visual knockout bracket — left side and right side converge to the **Grand Final** in the centre.")
 
@@ -765,6 +635,136 @@ elif page == "🎯 Draw":
                 else:
                     summary.append({"#": m+1, "Player A": pa, "Player B": pb, "Result": w or "—"})
             st.dataframe(pd.DataFrame(summary), use_container_width=True, hide_index=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PAGE 2: RESULTS ENTRY
+# ═══════════════════════════════════════════════════════════════════════════════
+elif page == "📝 Results Entry":
+    st.header("📝 Results Entry")
+    st.markdown(f"**{len(players)} Players** | **{num_rounds} Rounds** | Best of 3 Sets (First to 11)")
+
+    # Round selector
+    round_names = [get_round_name(r, num_rounds) for r in range(num_rounds)]
+    selected_round = st.selectbox("Select Round", range(num_rounds),
+                                   format_func=lambda x: round_names[x])
+
+    num_matches_in_round = bracket_size // (2 ** (selected_round + 1))
+
+    # Count real (non-bye) matches for the header
+    real_matches = [
+        m for m in range(num_matches_in_round)
+        if not any(
+            p == "BYE"
+            for p in get_match_participants(selected_round, m, bracket, matches, num_rounds)
+        )
+    ]
+    st.markdown(f"### {round_names[selected_round]} — {len(real_matches)} Match(es)")
+    st.markdown("---")
+
+    match_display_num = 0
+    for match_idx in range(num_matches_in_round):
+        player_a, player_b = get_match_participants(selected_round, match_idx, bracket, matches, num_rounds)
+
+        # Skip BYE matches entirely — they don't need results entered
+        if player_a == "BYE" or player_b == "BYE":
+            continue
+
+        if player_a is None or player_b is None:
+            st.markdown(f"*Waiting for previous round results*")
+            st.markdown("---")
+            continue
+
+        match_display_num += 1
+        match_key = get_match_key(selected_round, match_idx)
+        match_data = matches.get(match_key, {})
+
+        winner = get_winner(selected_round, match_idx, bracket, matches, num_rounds)
+        is_forfeit = bool(match_data.get("forfeit"))
+        forfeit_label = f" — 🚫 Forfeit ({match_data.get('forfeit_player', '')})" if is_forfeit else ""
+
+        with st.expander(f"**Match {match_display_num}: {player_a} vs {player_b}**" +
+                         (f" — Winner: {winner} 🏆{forfeit_label}" if winner else ""), expanded=False):
+
+            match_date = st.date_input(
+                    "Match Date",
+                    value=datetime.strptime(match_data["date"], "%Y-%m-%d").date()
+                    if match_data.get("date") else None,
+                    key=f"date_{match_key}"
+                )
+
+            # ── Forfeit toggle ────────────────────────────────────────────────
+            st.markdown("---")
+            forfeit_checked = st.checkbox(
+                "🚫 Record as Forfeit (opponent did not show up)",
+                value=is_forfeit,
+                key=f"forfeit_check_{match_key}"
+            )
+
+            forfeit_player = None
+            if forfeit_checked:
+                forfeiting = st.radio(
+                    "Which player forfeited?",
+                    options=[player_a, player_b],
+                    index=0 if match_data.get("forfeit") != "B" else 1,
+                    key=f"forfeit_who_{match_key}"
+                )
+                forfeit_player = "A" if forfeiting == player_a else "B"
+                st.warning(f"⚠️ **{forfeiting}** will be recorded as forfeiting. "
+                           f"**{''.join([player_b if forfeiting == player_a else player_a])}** advances.")
+
+            # ── Score entry (hidden when forfeit is selected) ─────────────────
+            new_sets = match_data.get("sets", [{}, {}, {}])
+            while len(new_sets) < 3:
+                new_sets.append({})
+
+            if not forfeit_checked:
+                st.markdown("---")
+                st.markdown(f"**{player_a}** vs **{player_b}**")
+                new_sets = []
+                cols = st.columns(3)
+                sets_data = match_data.get("sets", [{}, {}, {}])
+                while len(sets_data) < 3:
+                    sets_data.append({})
+                for set_idx in range(3):
+                    with cols[set_idx]:
+                        st.markdown(f"**Set {set_idx + 1}**")
+                        sa = st.number_input(
+                            f"{player_a}",
+                            min_value=0, max_value=99,
+                            value=sets_data[set_idx].get("score_a", 0) or 0,
+                            key=f"sa_{match_key}_{set_idx}"
+                        )
+                        sb = st.number_input(
+                            f"{player_b}",
+                            min_value=0, max_value=99,
+                            value=sets_data[set_idx].get("score_b", 0) or 0,
+                            key=f"sb_{match_key}_{set_idx}"
+                        )
+                        new_sets.append({"score_a": sa, "score_b": sb})
+
+                        sw = determine_set_winner(sa, sb)
+                        if sw == "A":
+                            st.success(f"✓ {player_a}")
+                        elif sw == "B":
+                            st.success(f"✓ {player_b}")
+
+            # ── Save button ───────────────────────────────────────────────────
+            st.markdown("---")
+            if st.button(f"💾 Save Match {match_display_num}", key=f"save_{match_key}"):
+                matches[match_key] = {
+                    "player_a": player_a,
+                    "player_b": player_b,
+                    "date": match_date.strftime("%Y-%m-%d") if match_date else None,
+                    "sets": new_sets,
+                    "forfeit": forfeit_player,
+                    "forfeit_player": (player_a if forfeit_player == "A" else player_b) if forfeit_player else None,
+                }
+                save_matches(matches, changed_key=match_key)
+                st.success("✅ Match saved successfully!")
+                st.rerun()
+
+        st.markdown("---")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
