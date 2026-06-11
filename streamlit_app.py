@@ -877,7 +877,7 @@ elif page == "📋 Rules of the Tournament":
     ---
 
     ### Contact
-    For any queries regarding the tournament, please contact Aussie.
+    For any queries regarding the tournament, please contact Austin.
 
     ---
 
