@@ -15,7 +15,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# ─── Player Data (from Abernethy Rd Table Tennis Comp Registrations.csv) ─────
+# ─── Player Data (from Abernethy Road Table Tennis Tournament Final Registrations.csv) ───
 PLAYERS = [
     "Trish Mason",
     "Austin Main",
@@ -65,6 +65,12 @@ PLAYERS = [
     "Giuseppe Casillo",
     "Amit Jaiswal",
     "Susanne Hantos",
+    "Tijana La bianca",
+    "Beatriz Padilla quintero",
+    "Stephan Burger",
+    "Brady Sloane",
+    "Jaxon Damiani",
+    "Johan van Dyk",
 ]
 
 
@@ -845,7 +851,7 @@ elif page == "📋 Rules of the Tournament":
     ---
 
     ### Tournament Structure
-    - **48 players** entered in a knockout bracket
+    - **54 players** entered in a knockout bracket
     - Players receiving a **BYE** automatically advance to the next round
     - All rounds must be completed before the next round begins
     - The draw is fixed at the start of the tournament
