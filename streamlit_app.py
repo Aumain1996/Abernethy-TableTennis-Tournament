@@ -843,10 +843,15 @@ elif page == "📋 Rules of the Tournament":
     ---
 
     ### Match Rules
-    1. **Service** alternates every **2 points**
-    2. Players do **not** have to serve cross court
-    3. At **10-10 (deuce)**, service alternates every **1 point**
-    4. Players switch ends after each set
+    1. At the **start of each set**, a **"play for serve"** point is played — whoever wins it earns the first serve. This point does **not** count towards the set score
+    2. After each point, the **winner of that point earns the serve** for the next point
+    3. Players do **not** have to serve cross court
+    4. A serve must **bounce once on each side** of the table
+    5. **Let serves** (net on serve, lands correctly) are replayed
+    6. A point is won when the opponent **fails to make a legal return**
+    7. At **10-10 (deuce)**, the same serving rule applies — winner of each point gets the next serve
+    8. Players switch ends after each set
+    9. If there is a **disputed call**, the tournament organiser's decision is final
 
     ---
 
