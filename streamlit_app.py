@@ -71,6 +71,8 @@ PLAYERS = [
     "Brady Sloane",
     "Jaxon Damiani",
     "Johan van Dyk",
+    "Nick Notis",
+    "James McEwan",
 ]
 
 
@@ -856,7 +858,7 @@ elif page == "📋 Rules of the Tournament":
     ---
 
     ### Tournament Structure
-    - **54 players** entered in a knockout bracket
+    - **56 players** entered in a knockout bracket
     - Players receiving a **BYE** automatically advance to the next round
     - All rounds must be completed before the next round begins
     - The draw is fixed at the start of the tournament
